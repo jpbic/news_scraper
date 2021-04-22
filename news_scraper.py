@@ -51,6 +51,43 @@ class NewsScraper:
             )
         ))
 
+    def get_page_links_new_page(self, config, search_term, num_articles, page_links):
+        page_index = config['initial_page_index'] + 1
+        page_links = list(map(lambda tag: tag.get_attribute('href'), page_links))
+        print(page_links)
+        while len(page_links) < num_articles:
+            self.driver.get(self.build_url(query_string=config['query_string'],
+                                           search_term=search_term,
+                                           search_term_concat=config['search_term_concat'],
+                                           page=page_index))
+            page_links.extend(self.get_hrefs_from_elements(config['articles_links_xpath']))
+            page_index += 1
+            print(page_links)
+        return page_links[:num_articles]
+
+    def get_page_links_load_button(self, config, num_articles, page_links):
+        while len(page_links) < num_articles:
+            self.driver.find_element_by_xpath('//body').send_keys(Keys.ESCAPE)
+            self.driver.execute_script("window.scroll(0, 10)")
+            button = WebDriverWait(self.driver, 10).until(
+                ec.element_to_be_clickable((By.XPATH, config['load_button_xpath']))
+            )
+            button.click()
+            time.sleep(3)
+            page_links = WebDriverWait(self.driver, 10).until(
+                ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
+            )
+        return list(map(lambda tag: tag.get_attribute('href'), page_links))[:num_articles]
+
+    def get_page_links_infinite_scroll(self, config, num_articles, page_links):
+        while len(page_links) < num_articles:
+            self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
+            time.sleep(3)
+            page_links = WebDriverWait(self.driver, 10).until(
+                ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
+            )
+        return list(map(lambda tag: tag.get_attribute('href'), page_links))[:num_articles]
+
     def scrape(self, site, search_term, num_articles) -> List[str]:
         """
         Returns the content of the specified number of articles as a list.
@@ -83,6 +120,11 @@ class NewsScraper:
         :type num_articles: int
         :return: List of the links of each article to be scraped
         """
+        if 'sort_button_xpath' in config:
+            self.driver.find_element_by_xpath(config['sort_button_xpath']).click()
+            self.driver.find_element_by_xpath(config['relevance_button_xpath']).click()
+            time.sleep(2)
+
         page_links = WebDriverWait(self.driver, 10).until(
             ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
         )
@@ -94,35 +136,18 @@ class NewsScraper:
 
         try:
             if config['search_pagination_type'] == 'new_page':
-                page_index = config['initial_page_index'] + 1
-                page_links = list(map(lambda tag: tag.get_attribute('href'), page_links))
-                while len(page_links) < num_articles:
-                    self.driver.get(self.build_url(query_string=config['query_string'],
-                                                   search_term=search_term,
-                                                   search_term_concat=config['search_term_concat'],
-                                                   page=page_index))
-                    page_links.extend(self.get_hrefs_from_elements(config['articles_links_xpath']))
-                    page_index += 1
+                page_links = self.get_page_links_new_page(config, search_term, num_articles, page_links)
             elif config['search_pagination_type'] == 'load_button':
-                while len(page_links) < num_articles:
-                    self.driver.find_element_by_xpath('//body').send_keys(Keys.ESCAPE)
-                    self.driver.execute_script("window.scroll(0, 10)")
-                    button = WebDriverWait(self.driver, 10).until(
-                        ec.element_to_be_clickable((By.XPATH, config['load_button_xpath']))
-                    )
-                    button.click()
-                    time.sleep(3)
-                    page_links = WebDriverWait(self.driver, 10).until(
-                        ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
-                    )
-                page_links = list(map(lambda tag: tag.get_attribute('href'), page_links))
+                page_links = self.get_page_links_load_button(config, num_articles, page_links)
+            elif config['search_pagination_type'] == 'infinite_scroll':
+                page_links = self.get_page_links_infinite_scroll(config, num_articles, page_links)
 
         except Exception as e:
             print(e)
-            return []
+            pass
 
-        print(page_links[:num_articles])
-        return page_links[:num_articles]
+        print(page_links)
+        return page_links
 
     def scrape_article_content(self, links_list, article_content_xpath) -> List[str]:
         """
