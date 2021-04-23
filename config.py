@@ -12,6 +12,7 @@ SITE_SCRAPE_CONFIG = {
         'full_name': 'The Blaze',
         'search_pagination_type': 'load_button',
         'query_string': r'https://www.theblaze.com/search/?q={query}',
+        'initial_page_index': '',
         'search_term_concat': r'+',
         'load_button_xpath': r'//div[@load-type="button"]',
         'articles_links_xpath': r'//article//div[@class="widget__head"]/a',
@@ -23,7 +24,7 @@ SITE_SCRAPE_CONFIG = {
         'query_string': r'https://www.breitbart.com/search/?s={query}#gsc.tab=0&gsc.q={query}&gsc.page={page}',
         'initial_page_index': 1,
         'search_term_concat': r'%20',
-        'articles_links_xpath': r'//article//div[@class="gsc-thumbnail-inside"]//a[contains(@class, "gs-title")]',
+        'articles_links_xpath': r'//article//div[@class="gsc-thumbnail-inside"]//a[@class="gs-title"]',
         'articles_content_xpath': r'//div[@class="entry-content"]/p',
         'popup_close_button_xpath': r'//span[@id="ISCTO_close"]'
     },
@@ -58,6 +59,7 @@ SITE_SCRAPE_CONFIG = {
         'full_name': 'CNBC',
         'search_pagination_type': 'infinite_scroll',
         'query_string': r'https://www.cnbc.com/search/?query={query}&qsearchterm={query}',
+        'initial_page_index': '',
         'search_term_concat': r'%20',
         'articles_links_xpath': r'//div[@class="SearchResult-searchResultImage"]/..',
         'articles_content_xpath': r'//div[@class="ArticleBody-articleBody"]//div[@class="group"]//p'
@@ -87,36 +89,80 @@ SITE_SCRAPE_CONFIG = {
     'cnn': {
         'full_name': 'CNN',
         'search_pagination_type': 'new_page',
-        'query_string': r'https://www.cnn.com/search?q={query}&size=10&from=10&page={page}',
+        'query_string': r'https://www.cnn.com/search?q={query}&size=10&from=10&page={page}&sort=relevance',
         'initial_page_index': 1,
         'search_term_concat': r'%20',
         'articles_links_xpath': r'//div[@class="cnn-search__result-contents"]//a',
-        'articles_content_xpath': r'//div[@class="l-container"]//*[contains(@class, "zn-body__paragraph")]',
-        'sort_button_xpath': r'//ul[contains(@class, "n_search-drop")]',
-        'relevance_button_xpath': r'//li[@id="relevance"]'
+        'articles_content_xpath': r'//div[@class="l-container"]//*[contains(@class, "zn-body__paragraph")]'
     },
     'abc': {
-
+        'full_name': 'ABC News',
+        'search_pagination_type': 'new_page',
+        'query_string': r'https://abcnews.go.com/search?searchtext={query}&type=Story&page={page}',
+        'initial_page_index': 1,
+        'search_term_concat': r'%20',
+        'articles_links_xpath': r'//div[@class="ContentRoll__Headline"]//a',
+        'articles_content_xpath': r'//section[contains(@class, "Article__Content")]/p'
     },
     'ny_post': {
-
+        'full_name': 'New York Post',
+        'search_pagination_type': 'new_page',
+        'query_string': r'https://nypost.com/search/{query}/page/{page}/?orderby=relevance',
+        'initial_page_index': 1,
+        'search_term_concat': r'+',
+        'articles_links_xpath': r'//h3[@class="entry-heading"]/a',
+        'articles_content_xpath': r'//div[contains(@class, "entry-content")]/p'
     },
     'cbs': {
-
+        'full_name': 'CBS News',
+        'search_pagination_type': 'load_button',
+        'query_string': r'https://www.cbsnews.com/search/?q={query}',
+        'initial_page_index': '',
+        'search_term_concat': r'+',
+        'load_button_xpath': r'//div[contains(@class, "component__view-more")]',
+        'articles_links_xpath': r'//article[contains(@class, "item--type-article")]/a[not(contains(@href, "/video/"))]',
+        'articles_content_xpath': r'//section[@class="content__body"]/p'
     },
     'npr': {
-
+        'full_name': 'NPR',
+        'search_pagination_type': 'load_button',
+        'query_string': r'https://www.npr.org/search?query={query}',
+        'initial_page_index': '',
+        'search_term_concat': r'%20',
+        'load_button_xpath': r'//button[@class="ais-InfiniteHits-loadMore"]',
+        'articles_links_xpath': r'//h2[@class="title"]/a[not(contains(@href, ".org"))]',
+        'articles_content_xpath': r'//div[@id="storytext"]/p'
     },
     'politico': {
-
+        'full_name': 'Politico',
+        'search_pagination_type': 'new_page',
+        'query_string': r'https://www.politico.com/search/{page}?q={query}',
+        'initial_page_index': 1,
+        'search_term_concat': r'%20',
+        'articles_links_xpath': r'//div[@class="summary"]//a',
+        'articles_content_xpath': r'//div[contains(@class, "story-text")]/p'
     },
     'axios': {
-
+        'full_name': 'Axios',
+        'search_pagination_type': 'new_page',
+        'query_string': r'https://www.axios.com/results?q={query}&page={page}',
+        'initial_page_index': 1,
+        'search_term_concat': r'+',
+        'articles_links_xpath': r'//figure[contains(@class, "flex-col")]/a',
+        'articles_content_xpath': r'//div[contains(@class, "gtm-story-text")]/p'
+    },
+    'usa_today': {
+        'full_name': 'USA Today',
+        'search_pagination_type': 'new_page',
+        'query_string': r'https://www.usatoday.com/search/?q={query}&page={page}',
+        'initial_page_index': 1,
+        'search_term_concat': r'%20',
+        'articles_links_xpath': r'//a[contains(@class, "gnt_se_a")]',
+        'articles_content_xpath': r'//p[@class="gnt_ar_b_p"]'
     }
 }
 
 SITE_CATEGORIES = {
-    'Conservative': ['daily_wire', 'blaze', 'breitbart'],
-    'Liberal': ['slate', 'bipartisan_report', 'tpm'],
-    'Mainstream': ['cnbc']
+    'conservative': {'daily_wire', 'blaze', 'breitbart'},
+    'liberal': {'slate', 'bipartisan_report', 'tpm'}
 }
