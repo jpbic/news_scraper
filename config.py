@@ -6,7 +6,8 @@ SITE_SCRAPE_CONFIG = {
         'initial_page_index': 1,
         'search_term_concat': r'%20',
         'articles_links_xpath': r'//article/a',
-        'articles_content_xpath': r'//div[@id="post-body-text"]//p'
+        'articles_content_xpath': r'//div[@id="post-body-text"]//p',
+        'sub_button_xpath': r'//button[@data-testid="continue-reading-button-reader"]'
     },
     'blaze': {
         'full_name': 'The Blaze',
@@ -24,7 +25,7 @@ SITE_SCRAPE_CONFIG = {
         'query_string': r'https://www.breitbart.com/search/?s={query}#gsc.tab=0&gsc.q={query}&gsc.page={page}',
         'initial_page_index': 1,
         'search_term_concat': r'%20',
-        'articles_links_xpath': r'//article//div[@class="gsc-thumbnail-inside"]//a[@class="gs-title"]',
+        'articles_links_xpath': r'//article//div[@class="gsc-thumbnail-inside"]//a[contains(@class, "gs-title") and not(contains(@href, "/tag/"))]',
         'articles_content_xpath': r'//div[@class="entry-content"]/p',
         'popup_close_button_xpath': r'//span[@id="ISCTO_close"]'
     },
@@ -44,7 +45,8 @@ SITE_SCRAPE_CONFIG = {
         'initial_page_index': 1,
         'search_term_concat': r'+',
         'articles_links_xpath': r'//div[contains(@class, "td_module_wrap")]//a[@class="td-image-wrap"]',
-        'articles_content_xpath': r'//div[@class="td-post-content"]//p'
+        'articles_content_xpath': r'//div[@class="td-post-content"]//p[not(.//iframe) and not(.//script)]',
+        'popup_close_button_path': r'//img[id="mCaddyClose"]'
     },
     'tpm': {
         'full_name': 'Talking Points Memo',
@@ -71,7 +73,7 @@ SITE_SCRAPE_CONFIG = {
         'initial_page_index': '',
         'search_term_concat': r'%20',
         'load_button_xpath': r'//div[contains(@class, "button load-more")]',
-        'articles_links_xpath': r'//article//h2[@class="title"]/a',
+        'articles_links_xpath': r'//article//h2[@class="title"]/a[not(contains(@href, "/video."))]',
         'articles_content_xpath': r'//div[@class="article-body"]//p'
     },
     'msnbc': {
@@ -119,7 +121,7 @@ SITE_SCRAPE_CONFIG = {
         'query_string': r'https://www.cbsnews.com/search/?q={query}',
         'initial_page_index': '',
         'search_term_concat': r'+',
-        'load_button_xpath': r'//div[contains(@class, "component__view-more")]',
+        'load_button_xpath': r'//a[contains(@class, "component__view-more")]',
         'articles_links_xpath': r'//article[contains(@class, "item--type-article")]/a[not(contains(@href, "/video/"))]',
         'articles_content_xpath': r'//section[@class="content__body"]/p'
     },

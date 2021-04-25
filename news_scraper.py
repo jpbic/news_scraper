@@ -4,7 +4,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as ec
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import TimeoutException
 from config import SITE_SCRAPE_CONFIG
 from typing import List
 import time
@@ -22,9 +21,12 @@ class NewsScraper:
     """
     Generic class for scraping news sites.
     """
+    PAGE_LOAD_TIMEOUT = 15
+
     def __init__(self, driver):
         self.driver = webdriver.Chrome(executable_path=driver,
                                        chrome_options=options)
+        self.driver.set_page_load_timeout(self.PAGE_LOAD_TIMEOUT)
 
     @staticmethod
     def build_url(query_string, search_term, search_term_concat, page) -> str:
@@ -43,61 +45,92 @@ class NewsScraper:
         """
         return query_string.format(query=search_term.replace(' ', search_term_concat), page=page)
 
-    def get_hrefs_from_elements(self, articles_links_xpath):
-        self.driver.find_element_by_xpath('//body').send_keys(Keys.ESCAPE)
-        time.sleep(1)
+    @staticmethod
+    def attempt_multiple(limit, exc_owner, exc_type, func, *func_args):
+        attempts = 1
+        while attempts <= limit:
+            try:
+                return func(*func_args)
+            except Exception as e:
+                attempts += 1
+                if attempts > limit:
+                    print('' if exc_owner is None else exc_owner, e)
+                    return None if not exc_type else exc_type()
+
+    def get_hrefs_from_elements(self, config):
         return list(map(
             lambda el: el.get_attribute('href'),
-            WebDriverWait(self.driver, 10).until(
-                ec.presence_of_all_elements_located((By.XPATH, articles_links_xpath))
+            self.attempt_multiple(
+                3,
+                config['full_name'] + ' get hrefs',
+                list,
+                WebDriverWait(self.driver, 5).until,
+                ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
             )
         ))
 
-    def get_page_links_new_page(self, config, search_term, num_articles, page_links):
+    def close_popup(self, popup_close_button_xpath):
+        try:
+            popup_button = WebDriverWait(self.driver, 3).until(
+                ec.visibility_of_element_located((By.XPATH, popup_close_button_xpath))
+            )
+            popup_button.click()
+        except:
+            pass
+
+    def get_page_links_new_page(self, config, search_term, num_articles):
+        page_links = self.get_hrefs_from_elements(config)
         page_index = config['initial_page_index'] + 1
-        page_links = list(map(lambda tag: tag.get_attribute('href'), page_links))
         while len(page_links) < num_articles:
-            try:
-                self.driver.get(self.build_url(query_string=config['query_string'],
-                                               search_term=search_term,
-                                               search_term_concat=config['search_term_concat'],
-                                               page=page_index))
-                page_links.extend(self.get_hrefs_from_elements(config['articles_links_xpath']))
-                page_index += 1
-            except Exception as e:
-                print(config['full_name'], e)
-                pass
+            prev_length = len(page_links)
+            self.attempt_multiple(3, config['full_name'] + ' get page', None, self.driver.get,
+                                  self.build_url(query_string=config['query_string'],
+                                                 search_term=search_term,
+                                                 search_term_concat=config['search_term_concat'],
+                                                 page=page_index))
+            if 'popup_close_button_xpath' in config:
+                self.close_popup(config['popup_close_button_xpath'])
+            page_links.extend(self.get_hrefs_from_elements(config))
+            if prev_length == len(page_links):
+                return page_links
+            page_index += 1
         return page_links[:num_articles]
 
-    def get_page_links_load_button(self, config, num_articles, page_links):
+    def get_page_links_load_button(self, config, num_articles):
+        page_links = []
         while len(page_links) < num_articles:
-            try:
-                self.driver.find_element_by_xpath('//body').send_keys(Keys.ESCAPE)
-                self.driver.execute_script("window.scroll(0, 10)")
-                button = WebDriverWait(self.driver, 10).until(
-                    ec.element_to_be_clickable((By.XPATH, config['load_button_xpath']))
-                )
-                button.click()
-                time.sleep(1.5)
-                page_links = WebDriverWait(self.driver, 10).until(
-                    ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
-                )
-            except Exception as e:
-                print(config['full_name'], e)
-                pass
+            prev_length = len(page_links)
+            self.driver.find_element_by_xpath('//body').send_keys(Keys.ESCAPE)
+            self.driver.execute_script("window.scroll(0, 10)")
+            button = self.attempt_multiple(3, config['full_name'] + ' get load button', None,
+                                           WebDriverWait(self.driver, 3).until,
+                                           ec.element_to_be_clickable((By.XPATH, config['load_button_xpath'])))
+            if button:
+                try:
+                    button.click()
+                except Exception as e:
+                    print('could not click load more button for ' + config['full_name'])
+                    print(e)
+            page_links = self.attempt_multiple(3, config['full_name'] + ' get page links', list,
+                                               WebDriverWait(self.driver, 1).until,
+                                               ec.presence_of_all_elements_located((By.XPATH,
+                                                                                    config['articles_links_xpath'])))
+            if prev_length == len(page_links):
+                break
         return list(map(lambda tag: tag.get_attribute('href'), page_links))[:num_articles]
 
-    def get_page_links_infinite_scroll(self, config, num_articles, page_links):
-        try:
-            while len(page_links) < num_articles:
-                self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-                time.sleep(1.5)
-                page_links = WebDriverWait(self.driver, 10).until(
-                    ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
-                )
-        except Exception as e:
-            print(config['full_name'], e)
-            pass
+    def get_page_links_infinite_scroll(self, config, num_articles):
+        page_links = []
+        while len(page_links) < num_articles:
+            prev_length = len(page_links)
+            self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
+            time.sleep(1)
+            page_links = self.attempt_multiple(3, config['full_name'] + ' get page links', list,
+                                               WebDriverWait(self.driver, 1).until,
+                                               ec.presence_of_all_elements_located((By.XPATH,
+                                                                                    config['articles_links_xpath'])))
+            if prev_length == len(page_links):
+                break
         return list(map(lambda tag: tag.get_attribute('href'), page_links))[:num_articles]
 
     def scrape(self, site, search_term, num_articles) -> List[str]:
@@ -114,12 +147,8 @@ class NewsScraper:
         """
         print('scraping ' + site)
         config = SITE_SCRAPE_CONFIG[site]
-        self.driver.get(self.build_url(query_string=config['query_string'],
-                                       search_term=search_term,
-                                       search_term_concat=config['search_term_concat'],
-                                       page=config['initial_page_index']))
         links_list = self.scrape_article_links(config, search_term, num_articles)
-        return self.scrape_article_content(links_list, config['articles_content_xpath'])
+        return self.scrape_article_content(links_list, config)
 
     def scrape_article_links(self, config, search_term, num_articles) -> List[str]:
         """
@@ -133,52 +162,58 @@ class NewsScraper:
         :type num_articles: int
         :return: List of the links of each article to be scraped
         """
-        page_links = WebDriverWait(self.driver, 10).until(
-            ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
-        )
+        self.attempt_multiple(3, config['full_name'] + ' get initial page', None, self.driver.get,
+                              self.build_url(query_string=config['query_string'],
+                                             search_term=search_term,
+                                             search_term_concat=config['search_term_concat'],
+                                             page=config['initial_page_index']))
 
         if 'popup_close_button_xpath' in config:
-            try:
-                WebDriverWait(self.driver, 5).until(
-                    ec.visibility_of_element_located((By.XPATH, config['popup_close_button_xpath']))
-                ).click()
-            except TimeoutException:
-                pass
+            self.close_popup(config['popup_close_button_xpath'])
 
         if config['search_pagination_type'] == 'new_page':
-            page_links = self.get_page_links_new_page(config, search_term, num_articles, page_links)
+            page_links = self.get_page_links_new_page(config, search_term, num_articles)
         elif config['search_pagination_type'] == 'load_button':
-            page_links = self.get_page_links_load_button(config, num_articles, page_links)
+            page_links = self.get_page_links_load_button(config, num_articles)
         elif config['search_pagination_type'] == 'infinite_scroll':
-            page_links = self.get_page_links_infinite_scroll(config, num_articles, page_links)
+            page_links = self.get_page_links_infinite_scroll(config, num_articles)
+        else:
+            page_links = []
 
         return page_links
 
-    def scrape_article_content(self, links_list, article_content_xpath) -> List[str]:
+    def scrape_article_content(self, links_list, config) -> List[str]:
         """
         Scrapes each link for article content.
 
         :param links_list: List of links to be scraped
         :type links_list: list
-        :param article_content_xpath: XPATH of the content to be scraped
-        :type article_content_xpath: str
+        :param config: Config object for button/article xpaths
+        :type config: dict
         :return: Tuple (List of the content of each article scraped, number of articles successfully scraped)
         """
         content_list = []
         for link in links_list:
-            attempts = 1
             print('scraping ' + link)
-            self.driver.get(link)
-            while attempts <= 3:
+            self.attempt_multiple(3, link, None, self.driver.get, link)
+            if 'sub_button_xpath' in config:
                 try:
-                    text_tags = WebDriverWait(self.driver, 5).until(
-                        ec.presence_of_all_elements_located((By.XPATH, article_content_xpath))
-                    )
-                    content_list.append(' '.join(p.text for p in text_tags))
-                    break
-                except Exception as e:
-                    attempts += 1
-                    if attempts == 4:
-                        print("failed to scrape " + link)
+                    WebDriverWait(self.driver, 1).until(
+                        ec.presence_of_element_located((By.XPATH, config['sub_button_xpath'])))
+                    print('subscription required for ' + link)
                     continue
+                except:
+                    pass
+
+            text_tags = self.attempt_multiple(3, link + ' content', list, WebDriverWait(self.driver, 3).until,
+                                              ec.presence_of_all_elements_located((By.XPATH,
+                                                                                   config['articles_content_xpath'])))
+            content = ''
+            for tag in text_tags:
+                try:
+                    content += ' ' + tag.text
+                except:
+                    continue
+            content_list.append(content)
+            print('finished scraping ' + link)
         return content_list
