@@ -20,6 +20,8 @@ class ArticleTextAnalyzer:
         :type training_dict: dict
         :return: Training data of the form [(article, classification)]
         """
+        for key in training_dict:
+            training_dict[key] = list(filter(lambda a: len(a.replace(' ', '')) > 0, training_dict[key]))
         train = [(article, 'conservative') for key in training_dict
                  for article in training_dict[key]
                  if key in SITE_CATEGORIES['conservative']]
@@ -76,9 +78,14 @@ class ArticleTextAnalyzer:
 
 if __name__ == '__main__':
     article_dict = ArticleTextAnalyzer.read_news_scraper_output_file_into_dict('./data/news_scraper_data.csv')
+    count_restrictions = {'conservative': 0, 'liberal': 0}
+    for key in article_dict:
+        for cl in SITE_CATEGORIES:
+            if key in SITE_CATEGORIES[cl]:
+                for article in article_dict[key]:
+                    count_restrictions[cl] += article.count('restrictions')
+    print(count_restrictions)
     ata = ArticleTextAnalyzer(article_dict)
-    # print(ata.classifier)
-    # print(ata.classifier.show_informative_features())
-    print(ata.classifier.prob_classify('restrictions').max())
-    # print(ata.classify_nonpartisan_articles())
-    # print(TEST_ARTICLES)
+    print(ata.classifier)
+    print(ata.classifier.show_informative_features(10))
+    print(ata.classifier.prob_classify('restrictions').prob('conservative'))

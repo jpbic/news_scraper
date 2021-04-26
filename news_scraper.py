@@ -7,7 +7,6 @@ from selenium.webdriver.chrome.options import Options
 from config import SITE_SCRAPE_CONFIG
 from typing import List
 import time
-import csv
 
 
 options = Options()
