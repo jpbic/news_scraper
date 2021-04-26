@@ -77,7 +77,8 @@ class ArticleTextAnalyzer:
 if __name__ == '__main__':
     article_dict = ArticleTextAnalyzer.read_news_scraper_output_file_into_dict('./data/news_scraper_data.csv')
     ata = ArticleTextAnalyzer(article_dict)
-    print(ata.classifier.show_informative_features())
-    # print(ata.classifier.prob_classify('restrictions').prob('liberal'))
+    # print(ata.classifier)
+    # print(ata.classifier.show_informative_features())
+    print(ata.classifier.prob_classify('restrictions').max())
     # print(ata.classify_nonpartisan_articles())
     # print(TEST_ARTICLES)
