@@ -7,6 +7,7 @@ from selenium.webdriver.chrome.options import Options
 from config import SITE_SCRAPE_CONFIG
 from typing import List
 import time
+import csv
 
 
 options = Options()
@@ -19,7 +20,7 @@ options.add_experimental_option("prefs", {"profile.default_content_setting_value
 
 class NewsScraper:
     """
-    Generic class for scraping news sites.
+    Generic class for scraping news sites using Chrome and ChromeDriver.
     """
     PAGE_LOAD_TIMEOUT = 15
 
@@ -47,6 +48,21 @@ class NewsScraper:
 
     @staticmethod
     def attempt_multiple(limit, exc_owner, exc_type, func, *func_args):
+        """
+        Attempts to perform a function up to a specified number of times, catching exception if all attempts fail
+        and returning a user-specified default type
+
+        :param limit: Maximum number of time to attempt function
+        :type limit: int
+        :param exc_owner: String that appears in error message if all attempts fail. Useful for logging source of
+                          exception.
+        :type exc_owner: str
+        :param exc_type: Data type to return if exception raised. Accepts any Python or user-defined types.
+        :param func: Function to attempt running.
+        :type func: Callable
+        :param func_args: Arguments to pass to func
+        :return:
+        """
         attempts = 1
         while attempts <= limit:
             try:
@@ -54,22 +70,37 @@ class NewsScraper:
             except Exception as e:
                 attempts += 1
                 if attempts > limit:
-                    print('' if exc_owner is None else exc_owner, e)
+                    print(func.__name__ if exc_owner is None else exc_owner, e)
                     return None if not exc_type else exc_type()
 
-    def get_hrefs_from_elements(self, config):
-        return list(map(
-            lambda el: el.get_attribute('href'),
-            self.attempt_multiple(
-                3,
-                config['full_name'] + ' get hrefs',
-                list,
-                WebDriverWait(self.driver, 5).until,
-                ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
-            )
-        ))
+    def get_hrefs_from_elements(self, config) -> List[str]:
+        """
+        Attempts to retrieve href attribute from article link WebElements.
 
-    def close_popup(self, popup_close_button_xpath):
+        :param config: Configuration data for site being scraped.
+        :type config: dict
+        :return: List of resolved href attributes.
+        """
+        page_links = self.attempt_multiple(3, config['full_name'] + ' get hrefs', list,
+                                           WebDriverWait(self.driver, 5).until,
+                                           ec.presence_of_all_elements_located((By.XPATH, config['articles_links_xpath']))
+        )
+        page_hrefs = []
+        for link in page_links:
+            try:
+                page_hrefs.append(link.get_attribute('href'))
+            except:
+                continue
+        return page_hrefs
+
+    def close_popup(self, popup_close_button_xpath) -> None:
+        """
+        Closes popup at specified xpath.
+
+        :param popup_close_button_xpath: Xpath of popup close button.
+        :type popup_close_button_xpath: str
+        :return: None
+        """
         try:
             popup_button = WebDriverWait(self.driver, 3).until(
                 ec.visibility_of_element_located((By.XPATH, popup_close_button_xpath))
@@ -78,7 +109,18 @@ class NewsScraper:
         except:
             pass
 
-    def get_page_links_new_page(self, config, search_term, num_articles):
+    def get_page_links_new_page(self, config, search_term, num_articles) -> List[str]:
+        """
+        Retrieves links to articles for sites that load additional search results in a new URL.
+
+        :param config: Configuration data for site being scraped.
+        :type config: dict
+        :param search_term: Word or phrased being searched.
+        :type search_term: str
+        :param num_articles: Number of articles to scrape.
+        :type num_articles: int
+        :return: List of resolved href attributes for article links.
+        """
         page_links = self.get_hrefs_from_elements(config)
         page_index = config['initial_page_index'] + 1
         while len(page_links) < num_articles:
@@ -96,7 +138,16 @@ class NewsScraper:
             page_index += 1
         return page_links[:num_articles]
 
-    def get_page_links_load_button(self, config, num_articles):
+    def get_page_links_load_button(self, config, num_articles) -> List[str]:
+        """
+        Retrieves links to articles for sites that load additional search results when the user clicks a button.
+
+        :param config: Configuration data for site being scraped.
+        :type config: dict
+        :param num_articles: Number of articles to scrape.
+        :type num_articles: int
+        :return: List of resolved href attributes for article links.
+        """
         page_links = []
         while len(page_links) < num_articles:
             prev_length = len(page_links)
@@ -119,7 +170,16 @@ class NewsScraper:
                 break
         return list(map(lambda tag: tag.get_attribute('href'), page_links))[:num_articles]
 
-    def get_page_links_infinite_scroll(self, config, num_articles):
+    def get_page_links_infinite_scroll(self, config, num_articles) -> List[str]:
+        """
+        Retrieves links to articles for sites that load additional search results as the user scrolls.
+
+        :param config: Configuration data for site being scraped.
+        :type config: dict
+        :param num_articles: Number of articles to scrape.
+        :type num_articles: int
+        :return: List of resolved href attributes for article links.
+        """
         page_links = []
         while len(page_links) < num_articles:
             prev_length = len(page_links)

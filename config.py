@@ -55,7 +55,8 @@ SITE_SCRAPE_CONFIG = {
         'initial_page_index': 1,
         'search_term_concat': r'+',
         'articles_links_xpath': r'//a[@class="Archive__PostImage"]',
-        'articles_content_xpath': r'//div[@id="article-content"]//p'
+        'articles_content_xpath': r'//div[@id="article-content"]//p',
+        'sub_button_xpath': r'//div[@class="PrimePaywall__Button"]'
     },
     'cnbc': {
         'full_name': 'CNBC',
@@ -103,7 +104,7 @@ SITE_SCRAPE_CONFIG = {
         'query_string': r'https://abcnews.go.com/search?searchtext={query}&type=Story&page={page}',
         'initial_page_index': 1,
         'search_term_concat': r'%20',
-        'articles_links_xpath': r'//div[@class="ContentRoll__Headline"]//a',
+        'articles_links_xpath': r'//div[@class="ContentRoll__Headline"]//a[not(contains(@href, "/video/"))]',
         'articles_content_xpath': r'//section[contains(@class, "Article__Content")]/p'
     },
     'ny_post': {
