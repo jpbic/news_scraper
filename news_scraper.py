@@ -9,24 +9,23 @@ from typing import List
 import time
 
 
-options = Options()
-options.headless = True
-options.add_argument('start-maximized')
-options.add_argument('--enable-automation')
-options.add_argument('--disable-blink-features=AutomationControlled')
-options.add_experimental_option("prefs", {"profile.default_content_setting_values.notifications": 2})
-
-
 class NewsScraper:
     """
     Generic class for scraping news sites using Chrome and ChromeDriver.
     """
     PAGE_LOAD_TIMEOUT = 15
+    CHAR_REPLACE = [('“', '"'), ('”', '"'), ('‘', '"'), ('’', '"'), ('[', ''), (']', '')]
+    options = Options()
+    options.headless = True
+    options.add_argument('start-maximized')
+    options.add_argument('--enable-automation')
+    options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_experimental_option("prefs", {"profile.default_content_setting_values.notifications": 2})
 
     def __init__(self, driver):
         self.driver = webdriver.Chrome(executable_path=driver,
-                                       chrome_options=options)
-        self.driver.set_page_load_timeout(self.PAGE_LOAD_TIMEOUT)
+                                       chrome_options=self.options)
+        self.driver.set_page_load_timeout(NewsScraper.PAGE_LOAD_TIMEOUT)
 
     @staticmethod
     def build_url(query_string, search_term, search_term_concat, page) -> str:
@@ -71,6 +70,13 @@ class NewsScraper:
                 if attempts > limit:
                     print(func.__name__ if exc_owner is None else exc_owner, e)
                     return None if not exc_type else exc_type()
+
+    @staticmethod
+    def replace_chars(text):
+        for pair in NewsScraper.CHAR_REPLACE:
+            if pair[0] in text:
+                text = text.replace(pair[0], pair[1])
+        return text
 
     def get_hrefs_from_elements(self, config) -> List[str]:
         """
@@ -182,8 +188,8 @@ class NewsScraper:
         page_links = []
         while len(page_links) < num_articles:
             prev_length = len(page_links)
-            self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight);')
-            time.sleep(1)
+            self.driver.execute_script('window.scrollTo(0, document.body.scrollHeight*0.9);')
+            time.sleep(3)
             page_links = self.attempt_multiple(3, config['full_name'] + ' get page links', list,
                                                WebDriverWait(self.driver, 1).until,
                                                ec.presence_of_all_elements_located((By.XPATH,
@@ -270,9 +276,9 @@ class NewsScraper:
             content = ''
             for tag in text_tags:
                 try:
-                    content += ' ' + tag.text
+                    content += ' ' + self.replace_chars(tag.text.strip())
                 except:
                     continue
-            content_list.append(content)
+            content_list.append(content.strip())
             print('finished scraping ' + link)
         return content_list
