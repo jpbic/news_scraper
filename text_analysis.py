@@ -6,7 +6,7 @@ from time import perf_counter
 from statistics import mean
 import csv
 from typing import List
-from config import SITE_CATEGORIES
+from config import SITE_CATEGORIES, SITE_SCRAPE_CONFIG
 
 
 class ArticleTextAnalyzer:
@@ -80,6 +80,8 @@ class ArticleTextAnalyzer:
         print(site + ': cleaning article ' + str(index + 1) + ' of ' + str(num_articles) + '.')
         clean_article = []
         for sentence in art_tb.sentences[:ArticleTextAnalyzer.SENTENCES_CLASSIFIED_PER_ARTICLE]:
+            if sentence.raw.find(SITE_SCRAPE_CONFIG[site]['full_name']) > -1:
+                continue
             clean_sentence = ''
             for word, pos in sentence.pos_tags:
                 if pos in ('NNP', 'NNPS') or word == 'Crow':
@@ -110,10 +112,11 @@ class ArticleTextAnalyzer:
                                  for row, sentence_list in zip(prob_conserv_list,
                                                                executor.map(self.clean_text_blob, prob_conserv_list))]
         for row in prob_conserv_list:
-            if row[0] in classifications:
-                classifications[row[0]].append(mean(row[1]))
-            else:
-                classifications[row[0]] = [mean(row[1])]
+            if len(row[1]) > 0:
+                if row[0] in classifications:
+                    classifications[row[0]].append(mean(row[1]))
+                else:
+                    classifications[row[0]] = [mean(row[1])]
         for key in classifications:
             classifications[key] = mean(classifications[key])
         upper_lim = mean([prob for key, prob in classifications.items() if key in SITE_CATEGORIES['conservative']])
@@ -132,6 +135,7 @@ if __name__ == '__main__':
     start = perf_counter()
     article_dict = ArticleTextAnalyzer.read_news_scraper_output_file_into_dict('./data/news_scraper_data.csv')
     ata = ArticleTextAnalyzer(article_dict)
+    print(ata.classifier.show_informative_features())
     print(ata.classify_nonpartisan_articles())
     end = perf_counter()
     print(f'Ran in {end - start:0.4f} seconds')

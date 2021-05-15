@@ -169,3 +169,274 @@ SITE_CATEGORIES = {
     'conservative': {'daily_wire', 'blaze', 'breitbart'},
     'liberal': {'slate', 'bipartisan_report', 'tpm'}
 }
+
+SITE_SPIDER_CONFIG = {
+    'daily_wire': {
+        'full_name': 'Daily Wire',
+        'article_links': {
+            'request_type': 'ajax',
+            'request_url': 'https://coavros3ua-dsn.algolia.net/1/indexes/*/queries',
+            'params': {
+                'x-algolia-agent': 'Algolia%20for%20JavaScript%20(4.8.3)%3B%20Browser%20(lite)%3B%20react%20'
+                                   '(17.0.1)%3B%20react-instantsearch%20(6.8.2)%3B%20JS%20Helper%20(3.3.4)',
+                'x-algolia-api-key': 'a4f0c53db65420b2348b5bd1e0c39967',
+                'x-algolia-application-id': 'COAVROS3UA'
+            },
+            'payload': {
+                'requests': [{
+                    'indexName': 'wp_prod_wp_posts_post',
+                    'params': 'highlightPreTag=%3Cais-highlight-0000000000%3E&highlightPostTag=%3C%2Fais-highlight-'
+                              '0000000000%3E&query={query}&page={page}&facets=%5B%5D&tagFilters='
+                }]
+            },
+            'initial_page_index': -1,
+            'results_level': ['results', 0, 'hits'],
+            'url_key': 'slug',
+            'base_url': 'https://www.dailywire.com/search/news/',
+            'link_exclusions': []
+        }
+    },
+    'blaze': {
+        'full_name': 'The Blaze',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': 'https://www.theblaze.com/search/?q={query}',
+            'articles_links_xpath': r'//article//div[@class="widget__head"]/a',
+            'initial_page_index': 0,
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'breitbart': {
+        'full_name': 'Breitbart',
+        'article_links': {
+            'request_type': 'google',
+            'link_exclusions': [r'/tag/']
+        }
+    },
+    'slate': {
+        'full_name': 'Slate',
+        'article_links': {
+            'request_type': 'google',
+            'link_exclusions': []
+        }
+    },
+    'bipartisan_report': {
+        'full_name': 'Bipartison Report',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': r'https://bipartisanreport.com/page/{page}/?s={query}',
+            'articles_links_xpath': r'//div[contains(@class, "td_module_wrap")]//a[@class="td-image-wrap"]',
+            'initial_page_index': 1,
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'tpm': {
+        'full_name': 'Talking Points Memo',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': r'https://talkingpointsmemo.com/search/{query}/page/{page}',
+            'articles_links_xpath': r'//a[@class="Archive__PostImage"]',
+            'initial_page_index': 1,
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'cnbc': {
+        'full_name': 'CNBC',
+        'article_links': {
+            'request_type': 'ajax',
+            'request_url': 'https://api.queryly.com/cnbc/json.aspx',
+            'params': {
+                'queryly_key': '31a35d40a9a64ab3',
+                'query': '{query}',
+                'endIndex': '0',
+                'batchsize': '20',
+                'callback': '',
+                'showfaceted': 'false',
+                'timezoneoffset': '240',
+                'facetedfields': 'formats',
+                'facetedkey': 'formats%7C',
+                'facetedvalue': '!Press%20Release%7C',
+                'needtoptickers': '0',
+                'additionalindexes': '4cd6f71fbf22424d,937d600b0d0d4e23,3bfbe40caee7443e,626fdfcd96444f28'
+            },
+            'payload': {
+            },
+            'initial_page_index': -1,
+            'results_level': ['results'],
+            'url_key': 'url',
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'fox_news': {
+        'full_name': 'Fox News',
+        'article_links': {
+            'request_type': 'google',
+            'link_exclusions': [r'/video.']
+        }
+    },
+    'msnbc': {
+        'full_name': 'MSNBC',
+        'article_links': {
+            'request_type': 'google',
+            'link_exclusions': [r'/watch/']
+        }
+    },
+    'cnn': {
+        'full_name': 'CNN',
+        'article_links': {
+            'request_type': 'ajax',
+            'request_url': r'https://search.api.cnn.io/content',
+            'params': {
+                'q': '{query}',
+                'sort': 'relevance',
+                'type': 'article',
+                'size': '30'
+            },
+            'payload': {
+            },
+            'initial_page_index': -1,
+            'results_level': ['result'],
+            'url_key': 'url',
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'abc': {
+        'full_name': 'ABC News',
+        'article_links': {
+            'request_type': 'ajax',
+            'request_url': r'https://abcnews.go.com/meta/api/search',
+            'params': {
+                'q': '{query}',
+                'sort': '',
+                'type': 'Story',
+                'section': '',
+                'totalrecords': 'true',
+                'offset': '0',
+                'limit': '30'
+            },
+            'payload': {
+            },
+            'initial_page_index': -1,
+            'results_level': ['item'],
+            'url_key': 'link',
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'ny_post': {
+        'full_name': 'New York Post',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': 'https://nypost.com/search/{query}/page/{page}/?orderby=relevance',
+            'articles_links_xpath': r'//h3[@class="entry-heading"]/a',
+            'initial_page_index': 1,
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'cbs': {
+        'full_name': 'CBS News',
+        'article_links': {
+            'request_type': 'ajax',
+            'request_url': r'https://api.queryly.com/json.aspx',
+            'params': {
+                'queryly_key': '4690eece66c6499f',
+                'batchsize': '30',
+                'query': '{query}',
+                'groups': 'live:0_4_2',
+                'showfaceted': 'true'
+            },
+            'payload': {
+            },
+            'initial_page_index': -1,
+            'results_level': ['items'],
+            'url_key': 'link',
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'npr': {
+        'full_name': 'NPR',
+        'article_links': {
+            'request_type': 'ajax',
+            'request_url': 'https://o2dg6462xl-dsn.algolia.net/1/indexes/*/queries',
+            'params': {
+                'x-algolia-agent': 'Algolia for JavaScript (3.35.1); Browser (lite); '
+                                   'react (16.14.0); react-instantsearch (5.7.0); JS Helper (2.28.1)',
+                'x-algolia-api-key': '40f2ee3bc56fa66dd5551ca1496ff941',
+                'x-algolia-application-id': 'O2DG6462XL'
+            },
+            'payload': {
+                'requests': [
+                    {
+                        'indexName': 'nprorg',
+                        'params': 'query={query}&maxValuesPerFacet=10&page={page}&analytics=true&'
+                                  'analyticsTags=%5B%22npr.org%2Fsearch%22%5D&highlightPreTag=%3'
+                                  'Cais-highlight-0000000000%3E&highlightPostTag=%3C%2Fais-highlight-0000000000%3E&'
+                                  'clickAnalytics=true&filters=&facets=%5B%22hasAudio%22%2C%22lastModifiedDate%22%2C%22'
+                                  'shows%22%5D&tagFilters='
+                    }
+                ]
+            },
+            'initial_page_index': -1,
+            'results_level': ['results', 0, 'hits'],
+            'url_key': 'url',
+            'link_exclusions': ['.org'],
+            'base_url': 'https://www.npr.org'
+        }
+    },
+    'politico': {
+        'full_name': 'Politico',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': 'https://www.politico.com/search/{page}?q={query}',
+            'articles_links_xpath': r'//div[@class="summary"]//a',
+            'initial_page_index': 1,
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'axios': {
+        'full_name': 'Axios',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': 'https://www.axios.com/results?q={query}&page={page}',
+            'articles_links_xpath': r'//figure[contains(@class, "flex-col")]/a',
+            'initial_page_index': 0,
+            'base_url': '',
+            'link_exclusions': []
+        }
+    },
+    'usa_today': {
+        'full_name': 'USA Today',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': 'https://www.usatoday.com/search/?q={query}&page={page}',
+            'articles_links_xpath': r'//a[contains(@class, "gnt_se_a")]',
+            'initial_page_index': 1,
+            'base_url': 'https://www.usatoday.com',
+            'link_exclusions': ['/videos/']
+        }
+    }
+}
+
+AJAX_HEADERS = {
+    "Connection": "keep-alive",
+    "Upgrade-Insecure-Requests": "1",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) '"
+                  "'Chrome/83.0.4103.97 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,'"
+              "'application/signed-exchange;v=b3;q=0.9",
+    "Sec-Fetch-Site": "same-origin",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-User": "?1",
+    "Sec-Fetch-Dest": "document",
+    "Referer": "https://www.google.com/",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Accept-Language": "en-US,en;q=0.9"
+}
