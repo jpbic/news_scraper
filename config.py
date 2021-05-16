@@ -192,8 +192,12 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': -1,
             'results_level': ['results', 0, 'hits'],
             'url_key': 'slug',
-            'base_url': 'https://www.dailywire.com/search/news/',
+            'base_url': 'https://www.dailywire.com/news/',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@id="post-body-text"]//p/text()|'
+                                     r'//div[@id="post-body-text"]//p//*/text()'
         }
     },
     'blaze': {
@@ -205,6 +209,10 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': 0,
             'base_url': '',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="body-description"]//p/text()|'
+                                     r'//div[@class="body-description"]//p//*/text()'
         }
     },
     'breitbart': {
@@ -212,6 +220,10 @@ SITE_SPIDER_CONFIG = {
         'article_links': {
             'request_type': 'google',
             'link_exclusions': [r'/tag/']
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="entry-content"]/p/text()|'
+                                     r'//div[@class="entry-content"]/p//*/text()'
         }
     },
     'slate': {
@@ -219,6 +231,10 @@ SITE_SPIDER_CONFIG = {
         'article_links': {
             'request_type': 'google',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="article__content"]//p/text()|'
+                                     r'//div[@class="article__content"]//p//*/text()'
         }
     },
     'bipartisan_report': {
@@ -230,6 +246,10 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': 1,
             'base_url': '',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="td-post-content"]//p/text()|'
+                                     r'//div[@class="td-post-content"]//p//*/text()'
         }
     },
     'tpm': {
@@ -241,6 +261,10 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': 1,
             'base_url': '',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@id="article-content"]//p/text()|'
+                                     r'//div[@id="article-content"]//p//*/text()'
         }
     },
     'cnbc': {
@@ -268,21 +292,33 @@ SITE_SPIDER_CONFIG = {
             'results_level': ['results'],
             'url_key': 'url',
             'base_url': '',
-            'link_exclusions': []
+            'link_exclusions': ['/video/']
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="ArticleBody-articleBody"]//div[@class="group"]//p/text()|'
+                                     r'//div[@class="ArticleBody-articleBody"]//div[@class="group"]//p//*/text()'
         }
     },
     'fox_news': {
         'full_name': 'Fox News',
         'article_links': {
             'request_type': 'google',
-            'link_exclusions': [r'/video.']
+            'link_exclusions': [r'/video.', r'/media/', r'/category/']
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="article-body"]/p/text()|'
+                                     r'//div[@class="article-body"]/p//*/text()'
         }
     },
     'msnbc': {
         'full_name': 'MSNBC',
         'article_links': {
             'request_type': 'google',
-            'link_exclusions': [r'/watch/']
+            'link_exclusions': [r'/watch/', r'/joe-biden']
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="article-body__content"]/p/text()|'
+                                     r'//div[@class="article-body__content"]/p//*/text()'
         }
     },
     'cnn': {
@@ -302,7 +338,14 @@ SITE_SPIDER_CONFIG = {
             'results_level': ['result'],
             'url_key': 'url',
             'base_url': '',
-            'link_exclusions': []
+            'link_exclusions': [r'/live-news/']
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="l-container"]//*[contains(@class, "zn-body__paragraph")]/text()|'
+                                     r'//div[@class="l-container"]//*[contains(@class, "zn-body__paragraph")]'
+                                     '//*/text()|'
+                                     r'//div[@class="article__content"]/p/text()|'
+                                     r'//div[@class="article__content"]/p//*/text()'
         }
     },
     'abc': {
@@ -325,7 +368,11 @@ SITE_SPIDER_CONFIG = {
             'results_level': ['item'],
             'url_key': 'link',
             'base_url': '',
-            'link_exclusions': []
+            'link_exclusions': ['goodmorningamerica']
+        },
+        'article_content': {
+            'article_content_xpath': r'//section[contains(@class, "Article__Content")]/p/text()|'
+                                     r'//section[contains(@class, "Article__Content")]/p//*/text()'
         }
     },
     'ny_post': {
@@ -337,6 +384,10 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': 1,
             'base_url': '',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[contains(@class, "entry-content")]/p/text()|'
+                                     r'//div[contains(@class, "entry-content")]/p//*/text()'
         }
     },
     'cbs': {
@@ -357,7 +408,11 @@ SITE_SPIDER_CONFIG = {
             'results_level': ['items'],
             'url_key': 'link',
             'base_url': '',
-            'link_exclusions': []
+            'link_exclusions': ['/video/']
+        },
+        'article_content': {
+            'article_content_xpath': r'//section[@class="content__body"]/p/text()|'
+                                     r'//section[@class="content__body"]/p//*/text()'
         }
     },
     'npr': {
@@ -388,6 +443,12 @@ SITE_SPIDER_CONFIG = {
             'url_key': 'url',
             'link_exclusions': ['.org'],
             'base_url': 'https://www.npr.org'
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@id="storytext"]/p/text()|'
+                                     r'//div[@id="storytext"]/p//*/text()|'
+                                     r'//div[contains(@class, "storytext")]/p/text()|'
+                                     r'//div[contains(@class, "storytext")]/p//*/text()'
         }
     },
     'politico': {
@@ -399,6 +460,10 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': 1,
             'base_url': '',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[contains(@class, "story-text")]/p/text()|'
+                                     r'//div[contains(@class, "story-text")]/p//*/text()'
         }
     },
     'axios': {
@@ -410,6 +475,10 @@ SITE_SPIDER_CONFIG = {
             'initial_page_index': 0,
             'base_url': '',
             'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[contains(@class, "gtm-story-text")]/p/text()|'
+                                     r'//div[contains(@class, "gtm-story-text")]/p//*/text()'
         }
     },
     'usa_today': {
@@ -420,7 +489,11 @@ SITE_SPIDER_CONFIG = {
             'articles_links_xpath': r'//a[contains(@class, "gnt_se_a")]',
             'initial_page_index': 1,
             'base_url': 'https://www.usatoday.com',
-            'link_exclusions': ['/videos/']
+            'link_exclusions': ['/videos/', '/in-depth/']
+        },
+        'article_content': {
+            'article_content_xpath': r'//p[@class="gnt_ar_b_p"]/text()|'
+                                     r'//p[@class="gnt_ar_b_p"]//*/text()'
         }
     }
 }
