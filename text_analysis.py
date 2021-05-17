@@ -5,6 +5,9 @@ from nltk.corpus import stopwords
 from time import perf_counter
 from statistics import mean
 import csv
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 from typing import List
 from config import SITE_CATEGORIES, SITE_SPIDER_CONFIG
 
@@ -135,12 +138,39 @@ class ArticleTextAnalyzer:
                                         classifications[key][1])
         return classifications
 
+    @staticmethod
+    def plot_classified_output(cl):
+        plot_df = pd.DataFrame.from_dict(cl)
+        plot_df.index = ['bias', 'subjectivity']
+        plot_df = plot_df.transpose().reset_index()
+        plot_df.rename(columns={'index': 'site'}, inplace=True)
+        print(plot_df)
+
+        sns.set_theme()
+
+        sns.relplot(
+            data=plot_df,
+            x='bias',
+            y='subjectivity',
+            hue='site'
+        )
+
+        for i in range(plot_df.shape[0]):
+            plt.text(
+                x=plot_df.bias[i] + (0.02 if plot_df.bias[i] <= 0.5 else -1 * (len(plot_df.site[i]) + 3) * 0.0125),
+                y=plot_df.subjectivity[i]-0.005,
+                s=plot_df.site[i],
+                fontdict=dict(size=10))
+
+        plt.show()
+
 
 if __name__ == '__main__':
     start = perf_counter()
     article_dict = ArticleTextAnalyzer.read_news_scraper_output_file_into_dict('./data/news_scraper_data.csv')
     ata = ArticleTextAnalyzer(article_dict)
     print(ata.classifier.show_informative_features())
-    print(ata.classify_nonpartisan_articles())
+    cl = ata.classify_nonpartisan_articles()
+    ata.plot_classified_output(cl)
     end = perf_counter()
     print(f'Ran in {end - start:0.4f} seconds')
