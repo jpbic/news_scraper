@@ -164,7 +164,7 @@ class NewsSpider:
 
 
 if __name__ == '__main__':
-    s = 'usa_today'
+    s = 'second_nexus'
     q = 'georgia voting law'
 
     # start = perf_counter()
@@ -180,10 +180,11 @@ if __name__ == '__main__':
     start = perf_counter()
     ns = NewsSpider(s)
     link_list = ns.retrieve_article_links(q)
+    print(link_list)
     # ns.scrape_article_content(link_list[3])
-    for link in link_list:
-        print(ns.scrape_article_content(link))
-        sleep(1.5)
+    # for link in link_list:
+    #     print(ns.scrape_article_content(link))
+    #     sleep(1.5)
     # ns = NewsSpider()
     # for s in SITE_SPIDER_CONFIG:
     #     ns.set_site(s)

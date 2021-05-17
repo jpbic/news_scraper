@@ -167,7 +167,7 @@ SITE_SCRAPE_CONFIG = {
 
 SITE_CATEGORIES = {
     'conservative': {'daily_wire', 'blaze', 'breitbart'},
-    'liberal': {'slate', 'bipartisan_report', 'tpm'}
+    'liberal': {'second_nexus', 'bipartisan_report', 'tpm'}
 }
 
 SITE_SPIDER_CONFIG = {
@@ -494,6 +494,21 @@ SITE_SPIDER_CONFIG = {
         'article_content': {
             'article_content_xpath': r'//p[@class="gnt_ar_b_p"]/text()|'
                                      r'//p[@class="gnt_ar_b_p"]//*/text()'
+        }
+    },
+    'second_nexus': {
+        'full_name': 'Second Nexus',
+        'article_links': {
+            'request_type': 'static',
+            'request_url': 'https://secondnexus.com/search/?q={query}',
+            'articles_links_xpath': r'//a[contains(@class, "custom-post-headline")]',
+            'initial_page_index': 1,
+            'base_url': '',
+            'link_exclusions': []
+        },
+        'article_content': {
+            'article_content_xpath': r'//div[@class="body-description"]/p/text()|'
+                                     r'/div[@class="body-description"]/p//*/text()'
         }
     }
 }

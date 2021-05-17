@@ -6,10 +6,11 @@ from time import perf_counter, sleep
 import csv
 
 DRIVER = 'C:/Users/jason/chromedriver/chromedriver.exe'  # Path to ChromeDriver
-SEARCH_TERM = 'Joe Biden'  # Term to be searched - **NEED TO MAKE USER INPUT**
+SEARCH_TERM = 'georgia voting law'  # Term to be searched - **NEED TO MAKE USER INPUT**
 NUM_ARTICLES = 10  # Number of articles to be scraped
 MAX_PROCESS_WORKERS = 2  # Number of cores for processing - **NEED TO FIND PACKAGE TO GENERATE BASED ON CLIENT MACHINE**
 MAX_THREAD_WORKERS = 4
+DEFAULT_CSV_PATH = './data/news_scraper_data.csv'
 
 
 def run_scraper(site):
@@ -20,7 +21,7 @@ def run_scraper(site):
     return articles
 
 
-def scraper_output_to_csv(article_dict, filepath):
+def scraper_output_to_csv(article_dict, filepath=DEFAULT_CSV_PATH):
     """Output results of scraping to a CSV."""
     print('writing scraping result to csv')
     with open(filepath, mode='w') as f:

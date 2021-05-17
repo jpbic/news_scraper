@@ -6,12 +6,12 @@ from time import perf_counter
 from statistics import mean
 import csv
 from typing import List
-from config import SITE_CATEGORIES, SITE_SCRAPE_CONFIG
+from config import SITE_CATEGORIES, SITE_SPIDER_CONFIG
 
 
 class ArticleTextAnalyzer:
     """Generic class to classify news articles and return most common words and phrases."""
-    SENTENCES_CLASSIFIED_PER_ARTICLE = 25
+    SENTENCES_CLASSIFIED_PER_ARTICLE = 50
     MAX_PROCESS_WORKERS = 2
 
     def __init__(self, art_dict):
@@ -39,7 +39,7 @@ class ArticleTextAnalyzer:
                     train.append((training_dict[site][ind], cl, site, ind, num_articles))
         with ProcessPoolExecutor(max_workers=ArticleTextAnalyzer.MAX_PROCESS_WORKERS) as executor:
             train = [(sentence, row[1]) for row, sentence_list in zip(train, executor.map(cls.clean_text_blob, train))
-                     for sentence in sentence_list]
+                     for sentence in sentence_list[0]]
         for cl in SITE_CATEGORIES:
             count_num_sentences[cl] = len([row for row in train if row[1] == cl])
         print('Number of sentences being used to train classifier: ' + str(count_num_sentences))
@@ -67,7 +67,7 @@ class ArticleTextAnalyzer:
             return output_dict
 
     @staticmethod
-    def clean_text_blob(row) -> List[str]:
+    def clean_text_blob(row) -> List[list]:
         """
         Converts articles into TextBlobs and removes stop words.
 
@@ -79,8 +79,9 @@ class ArticleTextAnalyzer:
         art_tb, cl, site, index, num_articles = row
         print(site + ': cleaning article ' + str(index + 1) + ' of ' + str(num_articles) + '.')
         clean_article = []
+        subjectivity = []
         for sentence in art_tb.sentences[:ArticleTextAnalyzer.SENTENCES_CLASSIFIED_PER_ARTICLE]:
-            if sentence.raw.find(SITE_SCRAPE_CONFIG[site]['full_name']) > -1:
+            if sentence.raw.find(SITE_SPIDER_CONFIG[site]['full_name']) > -1:
                 continue
             clean_sentence = ''
             for word, pos in sentence.pos_tags:
@@ -90,9 +91,10 @@ class ArticleTextAnalyzer:
                     if word not in stopwords.words('english'):
                         clean_sentence += ' ' + word.lemmatize().lower()
             clean_article.append(clean_sentence.strip())
+            subjectivity.append(sentence.sentiment.subjectivity)
         print(site + ': finished cleaning article ' + str(index + 1) + ' of ' + str(num_articles) + '.')
 
-        return clean_article
+        return [clean_article, subjectivity]
 
     def classify_nonpartisan_articles(self):
         """
@@ -107,27 +109,30 @@ class ArticleTextAnalyzer:
             for ind in range(art_list_length):
                 prob_conserv_list.append((self.article_blobs_dict[key][ind], '', key, ind, art_list_length))
         with ProcessPoolExecutor(max_workers=ArticleTextAnalyzer.MAX_PROCESS_WORKERS) as executor:
-            prob_conserv_list = [(row[2], [self.classifier.prob_classify(sentence).prob('conservative')
-                                           for sentence in sentence_list])
+            prob_conserv_list = [(row[2],
+                                  [self.classifier.prob_classify(sentence).prob('conservative')
+                                   for sentence in sentence_list[0]],
+                                  [sentence for sentence in sentence_list[1]])
                                  for row, sentence_list in zip(prob_conserv_list,
                                                                executor.map(self.clean_text_blob, prob_conserv_list))]
         for row in prob_conserv_list:
             if len(row[1]) > 0:
                 if row[0] in classifications:
-                    classifications[row[0]].append(mean(row[1]))
+                    classifications[row[0]].append((mean(row[1]), mean(row[2])))
                 else:
-                    classifications[row[0]] = [mean(row[1])]
+                    classifications[row[0]] = [(mean(row[1]), mean(row[2]))]
         for key in classifications:
-            classifications[key] = mean(classifications[key])
-        upper_lim = mean([prob for key, prob in classifications.items() if key in SITE_CATEGORIES['conservative']])
-        lower_lim = mean([prob for key, prob in classifications.items() if key in SITE_CATEGORIES['liberal']])
+            classifications[key] = (mean(classifications[key][0]), mean(classifications[key][1]))
+        upper_lim = mean([prob[0] for key, prob in classifications.items() if key in SITE_CATEGORIES['conservative']])
+        lower_lim = mean([prob[0] for key, prob in classifications.items() if key in SITE_CATEGORIES['liberal']])
         for key in classifications:
             if key in SITE_CATEGORIES['conservative']:
-                classifications[key] = 1
+                classifications[key] = (1, classifications[key][1])
             elif key in SITE_CATEGORIES['liberal']:
-                classifications[key] = 0
+                classifications[key] = (0, classifications[key][1])
             else:
-                classifications[key] = (classifications[key] - lower_lim) / (upper_lim - lower_lim)
+                classifications[key] = ((classifications[key][0] - lower_lim) / (upper_lim - lower_lim),
+                                        classifications[key][1])
         return classifications
 
 
