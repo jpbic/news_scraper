@@ -9,7 +9,9 @@ from api_keys import API_KEY_CONFIG
 
 
 class NewsSpider:
-    name = 'news_spider'
+    """
+    Class wrapper for scraping articles from news sites based on a search term.
+    """
     TARGET_RESULT_LENGTH = 10
     CHAR_REPLACE = [('“', '"'), ('”', '"'), ('‘', '"'), ('’', '"'), ('[', ''), (']', ''), (u'\xa0', ' '), (r'\'', '\'')]
 
@@ -23,6 +25,17 @@ class NewsSpider:
 
     @staticmethod
     def format_payload_params(config, search_term, page):
+        """
+        Formats query and form parameters with search term and page data based on site configuration in config.py
+
+        :param config: configuration object with URL, payload, and query parameter information
+        :type config: Any
+        :param search_term: word or phrased being searched
+        :type search_term: str
+        :param page: page number to be sent in query/form parameters
+        :type page: int
+        :return: config object formatted with search term and page information
+        """
         f_dict = deepcopy(config)
 
         for k, v in f_dict.items():
@@ -40,6 +53,16 @@ class NewsSpider:
 
     @staticmethod
     def fill_article_link_list(initial_page_index, al_func, **func_kwargs):
+        """
+        Repeats appropriate query function for retrieving article links until target number of articles are found
+
+        :param initial_page_index: index of first page of results
+        :type initial_page_index: int
+        :param al_func: query function for searching
+        :type al_func: function
+        :param func_kwargs: keyword arguments to pass to query function
+        :return: list of article links of target number length
+        """
         result = []
         prev_results = -1
         while prev_results < len(result) < NewsSpider.TARGET_RESULT_LENGTH:
@@ -50,6 +73,17 @@ class NewsSpider:
 
     @staticmethod
     def ajax_search(al_config, search_term, page):
+        """
+        Query function to retrieve article links for sites requiring ajax calls
+
+        :param al_config: article links config for site from config.py
+        :type al_config: dict
+        :param search_term: word or phrased being searched for
+        :type search_term: str
+        :param page: page number to include in ajax calls
+        :type page: int
+        :return: list of article links
+        """
         # if an ajax request is required, there will be an associated set of params and payload that needs to be
         # formatted with search term and page
         params = NewsSpider.format_payload_params(al_config['params'], search_term, page)
@@ -75,6 +109,23 @@ class NewsSpider:
 
     @staticmethod
     def google_search(search_term, cse_id, link_exclusions, service, page, site):
+        """
+        Query function to retrieve article links for sites implementing Google's custom search API
+
+        :param search_term: word or phrase being searched for
+        :type search_term: str
+        :param cse_id: search engine ID for Google CSE API for site
+        :type cse_id: str
+        :param link_exclusions: list of terms which, if found in URL, should be excluded from results
+        :type link_exclusions: list
+        :param service: googleapiclient service
+        :type service: googleapiclient.discovery.Resource
+        :param page: page of search results
+        :type page: int
+        :param site: site being searched by service
+        :type site: str
+        :return: list of article links
+        """
         # use Google CSE to get search items
         res = [item['link'] for item in
                service.cse().list(q=search_term, cx=cse_id, start=(page*10 + 1)).execute()['items']]
@@ -90,6 +141,17 @@ class NewsSpider:
 
     @staticmethod
     def static_search(al_config, search_term, page):
+        """
+        Query function to retrieve article links for sites with search results on different URLs
+
+        :param al_config: article links config for site from config.py
+        :type al_config: dict
+        :param search_term: word or phrased being searched for
+        :type search_term: str
+        :param page: page number to include in ajax calls
+        :type page: int
+        :return: list of article links
+        """
         # bs4 parses the HTML response
         soup = BeautifulSoup(requests.get(
             url=al_config['request_url'].format(query=search_term, page=page)
@@ -107,12 +169,30 @@ class NewsSpider:
 
     @staticmethod
     def replace_chars(text):
+        """
+        Function for replacing characters that make text analysis difficult/less reliable
+
+        :param text: text to be cleaned
+        :type text: str
+        :return: cleaned text
+        """
         for pair in NewsSpider.CHAR_REPLACE:
             if pair[0] in text:
                 text = text.replace(pair[0], pair[1])
         return text
 
     def retrieve_article_links(self, search_term, api_key=None, cse_id=None):
+        """
+        Function wrapper for executing the proper query function based on instance configuration
+
+        :param search_term: word or phrase being searched for
+        :type search_term: str
+        :param api_key: Google developer API key
+        :type api_key: str
+        :param cse_id: search engine ID for Google CSE for site
+        :type api_key: str
+        :return: list of article links
+        """
         # config for retrieving article links
         al_config = self.config['article_links']
 
@@ -145,6 +225,13 @@ class NewsSpider:
             )
 
     def scrape_article_content(self, link):
+        """
+        Function for scraping article content based on xpath
+
+        :param link: link to article
+        :type link: str
+        :return: article text
+        """
         ac_config = self.config['article_content']
         content = ''
 

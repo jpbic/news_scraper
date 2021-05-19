@@ -17,6 +17,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 from wordcloud import WordCloud
+from adjustText import adjust_text
 from config import SCATTER_PLOT_STYLE_PARAMS
 
 # misc
@@ -145,7 +146,16 @@ class ArticleTextAnalyzer:
         return {'sentences': clean_article, 'subjectivity': subjectivity}
 
     @staticmethod
-    def generate_wordclouds(data, bgcolor, axes):
+    def generate_wordclouds(data, axes) -> None:
+        """
+        Create a word cloud for each bias and assign them to plot axes
+
+        :param data: dict of the form {site: {sentences: list, subjectivity: list}}
+        :type data: dict
+        :param axes: axes of matplotlib grid spec
+        :type axes: list
+        :return: None
+        """
         cloud_strings = {bias: '' for bias in SITE_CATEGORIES}
         for key, sa in data.items():
             for bias, site_set in SITE_CATEGORIES.items():
@@ -161,7 +171,7 @@ class ArticleTextAnalyzer:
 
         for axis, (bias, cloud_string), cm in zip(axes, cloud_strings.items(), colormaps):
             wc = WordCloud(
-                background_color=bgcolor,
+                background_color='black',
                 max_words=100,
                 collocations=True,
                 colormap=cm
@@ -170,9 +180,9 @@ class ArticleTextAnalyzer:
             axis.axis('off')
             axis.set_title(bias.capitalize(), color='white', fontsize=16)
 
-    def classify_nonpartisan_articles(self):
+    def classify_nonpartisan_articles(self) -> dict:
         """
-        Classifies each article for each site not part of the training set.
+        Wrapper for multiprocessing article classification
 
         :return: Dictionary of the form {site: [classification(article)]
         """
@@ -184,7 +194,14 @@ class ArticleTextAnalyzer:
 
         return classifications
 
-    def calculate_means(self, blobs_dict_item):
+    def calculate_means(self, blobs_dict_item) -> dict:
+        """
+        Calculate the mean bias and subjectivity of the site
+
+        :param blobs_dict_item: tuple of the form (site, {sentences: list, subjectivity: list})
+        :type blobs_dict_item: tuple
+        :return: dict of the form {'bias': double, 'subjectivity': double}
+        """
         site, sentence_analysis = blobs_dict_item
         print('calculating mean bias and subjectivity for ' + site)
         return {
@@ -193,7 +210,14 @@ class ArticleTextAnalyzer:
             'subjectivity': mean(sentence_analysis['subjectivity'])
         }
 
-    def plot_output(self, cl):
+    def plot_output(self, cl) -> None:
+        """
+        Create visualizations for text data analysis
+
+        :param cl: dict of the form {'bias': double, 'subjectivity': double}
+        :type cl: dict
+        :return: None
+        """
         # create dataframe for scatter plot
         plot_df = pd.DataFrame.from_dict(cl)
         plot_df = plot_df.transpose().reset_index()
@@ -223,7 +247,7 @@ class ArticleTextAnalyzer:
             legend=None,
             palette=sns.color_palette('coolwarm', as_cmap=True)
         )
-        for i in range(plot_df.shape[0]):
+        annotations = [
             ax1.annotate(
                 text=plot_df.full_name[i],
                 xy=(plot_df.bias[i], plot_df.subjectivity[i]),
@@ -233,11 +257,23 @@ class ArticleTextAnalyzer:
                 fontsize=8,
                 color='white'
             )
+            for i in range(plot_df.shape[0])
+        ]
+        adjust_text(annotations)
+        # for i in range(plot_df.shape[0]):
+        #     ax1.annotate(
+        #         text=plot_df.full_name[i],
+        #         xy=(plot_df.bias[i], plot_df.subjectivity[i]),
+        #         textcoords='offset points',
+        #         xytext=(0, 5),
+        #         ha='center',
+        #         fontsize=8,
+        #         color='white'
+        #     )
 
         # create word clouds and assign to bottom two slots in layout
         self.generate_wordclouds(
             data=self.article_blobs_dict,
-            bgcolor='black',
             axes=[ax2, ax3]
         )
 

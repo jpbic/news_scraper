@@ -9,9 +9,9 @@ import csv
 DRIVER = 'C:/Users/jason/chromedriver/chromedriver.exe'  # Path to ChromeDriver
 SEARCH_TERM = 'georgia voting law'  # Term to be searched - **NEED TO MAKE USER INPUT**
 NUM_ARTICLES = 10  # Number of articles to be scraped
-MAX_PROCESS_WORKERS = cpu_count(logical=False)
-MAX_THREAD_WORKERS = cpu_count()
-DEFAULT_CSV_PATH = './data/news_scraper_data.csv'
+MAX_PROCESS_WORKERS = cpu_count(logical=False) # max number of processes that can be run simultaneously
+MAX_THREAD_WORKERS = cpu_count() # max number of threads that can be run simultaneously
+DEFAULT_CSV_PATH = './data/news_scraper_data.csv' # default path for scraper data output
 
 
 def run_scraper(site):
