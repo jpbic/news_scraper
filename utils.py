@@ -1,6 +1,7 @@
 from news_scraper import NewsScraper
 from spiders.news_spider import NewsSpider
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from psutil import cpu_count
 from config import SITE_SPIDER_CONFIG
 from time import perf_counter, sleep
 import csv
@@ -8,8 +9,8 @@ import csv
 DRIVER = 'C:/Users/jason/chromedriver/chromedriver.exe'  # Path to ChromeDriver
 SEARCH_TERM = 'georgia voting law'  # Term to be searched - **NEED TO MAKE USER INPUT**
 NUM_ARTICLES = 10  # Number of articles to be scraped
-MAX_PROCESS_WORKERS = 2  # Number of cores for processing - **NEED TO FIND PACKAGE TO GENERATE BASED ON CLIENT MACHINE**
-MAX_THREAD_WORKERS = 4
+MAX_PROCESS_WORKERS = cpu_count(logical=False)
+MAX_THREAD_WORKERS = cpu_count()
 DEFAULT_CSV_PATH = './data/news_scraper_data.csv'
 
 

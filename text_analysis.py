@@ -3,6 +3,7 @@ import csv
 from textblob import TextBlob
 from textblob.classifiers import NaiveBayesClassifier
 from nltk.corpus import stopwords
+from psutil import cpu_count
 
 # analysis
 from concurrent.futures import ProcessPoolExecutor, as_completed
@@ -14,6 +15,7 @@ from config import SITE_CATEGORIES, SITE_SPIDER_CONFIG
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 from wordcloud import WordCloud
 from config import SCATTER_PLOT_STYLE_PARAMS
 
@@ -25,7 +27,11 @@ from typing import List
 class ArticleTextAnalyzer:
     """Generic class to classify news articles and return most common words and phrases."""
     SENTENCES_CLASSIFIED_PER_ARTICLE = 50
-    MAX_PROCESS_WORKERS = 2
+    MAX_PROCESS_WORKERS = cpu_count(logical=False)
+    STOP_WORDS = stopwords.words('english')
+    STOP_WORDS.extend([
+        'democrat', 'democrats', 'republican', 'republicans'
+    ])
 
     def __init__(self, art_dict, search_term=''):
         self.article_blobs_dict = self.create_clean_sentences(art_dict, search_term)
@@ -80,6 +86,8 @@ class ArticleTextAnalyzer:
         """
         Wrapper for multiprocessing cleaning each article and creating sentences for classification
 
+        :param search_term: word or phrase being searched
+        :type search_term: str
         :param article_dict: dict of the form {site: list}
         :type article_dict: dict
         :return: dict of sites with dict values that contain cleaned and lemmatized sentences and subjectivity
@@ -101,6 +109,8 @@ class ArticleTextAnalyzer:
         Accepts articles as TextBlobs and breaks them up into sentences, removes stop words and lemmatizes,
         and measures subjectivity
 
+        :param search_term: word or phrase being searched - will be excluded from final text
+        :type search_term: str
         :param art_tb: TextBlob of a full article
         :type art_tb: TextBlob
         :param site: website key
@@ -119,12 +129,14 @@ class ArticleTextAnalyzer:
                 continue
             clean_sentence = ''
             for word, pos in sentence.pos_tags:
-                if word.lower() in TextBlob(search_term).words.lower():
-                    continue
-                elif pos in ('NNP', 'NNPS') or word == 'Crow':
-                    clean_sentence += ' ' + word.singularize()
-                else:
-                    if word.lower() not in stopwords.words('english'):
+                if word.lower() not in ArticleTextAnalyzer.STOP_WORDS and word not in ArticleTextAnalyzer.STOP_WORDS:
+                    if word.lower() in TextBlob(search_term).words.lower():
+                        continue
+                    elif pos == 'NNP' or word == 'Crow':
+                        clean_sentence += ' ' + word
+                    elif pos == 'NNPS':
+                        clean_sentence += ' ' + word.singularize()
+                    else:
                         clean_sentence += ' ' + word.lemmatize().lower()
             clean_article.append(clean_sentence.strip())
             subjectivity.append(sentence.sentiment.subjectivity)
@@ -140,10 +152,20 @@ class ArticleTextAnalyzer:
                 if key in site_set:
                     cloud_strings[bias] += ' ' + ' '.join([sentence for sentence in sa['sentences']])
 
-        for axis, (bias, cloud_string) in zip(axes, cloud_strings.items()):
+        colors1 = [(1, 1, 1), (0, 0.48, 1)]
+        colors2 = [(1, 1, 1), (1, 0.13, 0.13)]
+        colormaps = [
+            LinearSegmentedColormap.from_list(name='cm1', colors=colors1, N=100),
+            LinearSegmentedColormap.from_list(name='cm1', colors=colors2, N=100)
+        ]
+
+        for axis, (bias, cloud_string), cm in zip(axes, cloud_strings.items(), colormaps):
             wc = WordCloud(
                 background_color=bgcolor,
-                max_words=100).generate_from_frequencies(TextBlob(cloud_string).word_counts)
+                max_words=100,
+                collocations=True,
+                colormap=cm
+            ).generate_from_frequencies(TextBlob(cloud_string).np_counts)
             axis.imshow(wc)
             axis.axis('off')
             axis.set_title(bias.capitalize(), color='white', fontsize=16)
@@ -186,6 +208,8 @@ class ArticleTextAnalyzer:
         fig = plt.figure(constrained_layout=True)
         gs = fig.add_gridspec(2, 2)
         ax1 = fig.add_subplot(gs[0, :])
+        ax1.spines['right'].set_visible(False)
+        ax1.spines['top'].set_visible(False)
         ax2 = fig.add_subplot(gs[1, 0])
         ax3 = fig.add_subplot(gs[1, 1])
 
@@ -213,7 +237,7 @@ class ArticleTextAnalyzer:
         # create word clouds and assign to bottom two slots in layout
         self.generate_wordclouds(
             data=self.article_blobs_dict,
-            bgcolor='white',
+            bgcolor='black',
             axes=[ax2, ax3]
         )
 
