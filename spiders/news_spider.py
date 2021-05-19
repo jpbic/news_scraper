@@ -6,7 +6,6 @@ from copy import deepcopy
 from string import Formatter
 from config import SITE_SPIDER_CONFIG
 from api_keys import API_KEY_CONFIG
-from time import perf_counter, sleep
 
 
 class NewsSpider:
@@ -161,34 +160,3 @@ class NewsSpider:
                 continue
 
         return content.strip()
-
-
-if __name__ == '__main__':
-    s = 'second_nexus'
-    q = 'georgia voting law'
-
-    # start = perf_counter()
-    # DRIVER, NUM_ARTICLES = 'C:/Users/jason/chromedriver/chromedriver.exe', 10
-    # scraper = NewsScraper(DRIVER)
-    # for s in SITE_SCRAPE_CONFIG:
-    #     scraper.scrape_article_links(SITE_SCRAPE_CONFIG[s], q, NUM_ARTICLES)
-    #     # print(scraper.scrape_article_links(SITE_SCRAPE_CONFIG[s], q, NUM_ARTICLES))
-    # scraper.driver.quit()
-    # end = perf_counter()
-    # print(f'Selenium Ran in {end - start:0.4f} seconds')
-    #
-    start = perf_counter()
-    ns = NewsSpider(s)
-    link_list = ns.retrieve_article_links(q)
-    print(link_list)
-    # ns.scrape_article_content(link_list[3])
-    # for link in link_list:
-    #     print(ns.scrape_article_content(link))
-    #     sleep(1.5)
-    # ns = NewsSpider()
-    # for s in SITE_SPIDER_CONFIG:
-    #     ns.set_site(s)
-    #     ns.retrieve_article_links(q)
-    #     # print(ns.retrieve_article_links(q))
-    end = perf_counter()
-    print(f'Requests Ran in {end - start:0.4f} seconds')

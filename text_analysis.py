@@ -1,15 +1,25 @@
+# initialization
+import csv
 from textblob import TextBlob
 from textblob.classifiers import NaiveBayesClassifier
-from concurrent.futures import ProcessPoolExecutor
 from nltk.corpus import stopwords
-from time import perf_counter
+
+# analysis
+from concurrent.futures import ProcessPoolExecutor, as_completed
+import random
 from statistics import mean
-import csv
+from config import SITE_CATEGORIES, SITE_SPIDER_CONFIG
+
+# visualization
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
+from config import SCATTER_PLOT_STYLE_PARAMS
+
+# misc
+from time import perf_counter
 from typing import List
-from config import SITE_CATEGORIES, SITE_SPIDER_CONFIG
 
 
 class ArticleTextAnalyzer:
@@ -17,36 +27,10 @@ class ArticleTextAnalyzer:
     SENTENCES_CLASSIFIED_PER_ARTICLE = 50
     MAX_PROCESS_WORKERS = 2
 
-    def __init__(self, art_dict):
-        self.article_blobs_dict = {site: [TextBlob(article) for article in art_dict[site]] for site in art_dict}
+    def __init__(self, art_dict, search_term=''):
+        self.article_blobs_dict = self.create_clean_sentences(art_dict, search_term)
         self.classifier = NaiveBayesClassifier(self.generate_training_data(self.article_blobs_dict))
         print('finished training classifier')
-
-    @classmethod
-    def generate_training_data(cls, training_dict) -> List[tuple]:
-        """
-        Generates the training data set used to build the classifier.
-
-        :param training_dict: Dictionary of the form {site: list of articles}
-        :type training_dict: dict
-        :return: Training data of the form [(article, classification)]
-        """
-        print('generating training data')
-        train = []
-        count_num_sentences = {}
-        for cl, site_set in SITE_CATEGORIES.items():
-            count_num_sentences[cl] = 0
-            for site in site_set:
-                num_articles = len(training_dict[site])
-                for ind in range(num_articles):
-                    train.append((training_dict[site][ind], cl, site, ind, num_articles))
-        with ProcessPoolExecutor(max_workers=ArticleTextAnalyzer.MAX_PROCESS_WORKERS) as executor:
-            train = [(sentence, row[1]) for row, sentence_list in zip(train, executor.map(cls.clean_text_blob, train))
-                     for sentence in sentence_list[0]]
-        for cl in SITE_CATEGORIES:
-            count_num_sentences[cl] = len([row for row in train if row[1] == cl])
-        print('Number of sentences being used to train classifier: ' + str(count_num_sentences))
-        return train
 
     @staticmethod
     def read_news_scraper_output_file_into_dict(filepath) -> dict:
@@ -70,16 +54,63 @@ class ArticleTextAnalyzer:
             return output_dict
 
     @staticmethod
-    def clean_text_blob(row) -> List[list]:
+    def generate_training_data(art_dict) -> List[tuple]:
         """
-        Converts articles into TextBlobs and removes stop words.
+        Creates training data for classifier from article dict based on site classifications in config.SITE_CATEGORIES
 
-        :param row: Tuple of the form (article (str), category (str), site (str), article number (int),
-                          number of articles for site (int))
-        :type row: tuple
-        :return: List of sentences stripped of stop words and all but proper nouns lemmatized and lowercased
+        :param art_dict: dict of the form {site: {sentences: list, subjectivity: list}}
+        :type art_dict: dict
+        :return: list of tuples to use as training data for classifier
         """
-        art_tb, cl, site, index, num_articles = row
+
+        sentence_cl = {cl: [] for cl in SITE_CATEGORIES}
+        for site, sentence_analysis in art_dict.items():
+            for cl, site_set in SITE_CATEGORIES.items():
+                if site in site_set:
+                    sentence_cl[cl].extend([(sentence, cl) for sentence in sentence_analysis['sentences']])
+        max_articles = min(list(map(len, sentence_cl.values())))
+        for cl in sentence_cl:
+            sentence_cl[cl] = random.sample(sentence_cl[cl], max_articles)
+        print('Number of sentences used to train classifier by type: ' + str(max_articles))
+
+        return [tup for tup_list in sentence_cl.values() for tup in tup_list]
+
+    @staticmethod
+    def create_clean_sentences(article_dict, search_term) -> dict:
+        """
+        Wrapper for multiprocessing cleaning each article and creating sentences for classification
+
+        :param article_dict: dict of the form {site: list}
+        :type article_dict: dict
+        :return: dict of sites with dict values that contain cleaned and lemmatized sentences and subjectivity
+        """
+        clean_dict = {site: {'sentences': [], 'subjectivity': []} for site in article_dict}
+        with ProcessPoolExecutor(max_workers=ArticleTextAnalyzer.MAX_PROCESS_WORKERS) as ex:
+            futures = {ex.submit(ArticleTextAnalyzer.clean_text_blob, search_term,
+                                 TextBlob(article), site, article_list.index(article), len(article_list)): site
+                       for site, article_list in article_dict.items() for article in article_list}
+            for f in as_completed(futures):
+                for key, value in f.result().items():
+                    clean_dict[futures[f]][key].extend(value)
+
+        return clean_dict
+
+    @staticmethod
+    def clean_text_blob(search_term, art_tb, site, index, num_articles) -> dict:
+        """
+        Accepts articles as TextBlobs and breaks them up into sentences, removes stop words and lemmatizes,
+        and measures subjectivity
+
+        :param art_tb: TextBlob of a full article
+        :type art_tb: TextBlob
+        :param site: website key
+        :type site: str
+        :param index: index of article in list of articles for site
+        :type index: int
+        :param num_articles: total articles scraped for site
+        :type num_articles: int
+        :return: dict of the form {'sentences': list, 'subjectivity': list}
+        """
         print(site + ': cleaning article ' + str(index + 1) + ' of ' + str(num_articles) + '.')
         clean_article = []
         subjectivity = []
@@ -88,16 +119,34 @@ class ArticleTextAnalyzer:
                 continue
             clean_sentence = ''
             for word, pos in sentence.pos_tags:
-                if pos in ('NNP', 'NNPS') or word == 'Crow':
-                    clean_sentence += ' ' + word
+                if word.lower() in TextBlob(search_term).words.lower():
+                    continue
+                elif pos in ('NNP', 'NNPS') or word == 'Crow':
+                    clean_sentence += ' ' + word.singularize()
                 else:
-                    if word not in stopwords.words('english'):
+                    if word.lower() not in stopwords.words('english'):
                         clean_sentence += ' ' + word.lemmatize().lower()
             clean_article.append(clean_sentence.strip())
             subjectivity.append(sentence.sentiment.subjectivity)
         print(site + ': finished cleaning article ' + str(index + 1) + ' of ' + str(num_articles) + '.')
 
-        return [clean_article, subjectivity]
+        return {'sentences': clean_article, 'subjectivity': subjectivity}
+
+    @staticmethod
+    def generate_wordclouds(data, bgcolor, axes):
+        cloud_strings = {bias: '' for bias in SITE_CATEGORIES}
+        for key, sa in data.items():
+            for bias, site_set in SITE_CATEGORIES.items():
+                if key in site_set:
+                    cloud_strings[bias] += ' ' + ' '.join([sentence for sentence in sa['sentences']])
+
+        for axis, (bias, cloud_string) in zip(axes, cloud_strings.items()):
+            wc = WordCloud(
+                background_color=bgcolor,
+                max_words=100).generate_from_frequencies(TextBlob(cloud_string).word_counts)
+            axis.imshow(wc)
+            axis.axis('off')
+            axis.set_title(bias.capitalize(), color='white', fontsize=16)
 
     def classify_nonpartisan_articles(self):
         """
@@ -106,61 +155,67 @@ class ArticleTextAnalyzer:
         :return: Dictionary of the form {site: [classification(article)]
         """
         classifications = {}
-        prob_conserv_list = []
-        for key in self.article_blobs_dict:
-            art_list_length = len(self.article_blobs_dict[key])
-            for ind in range(art_list_length):
-                prob_conserv_list.append((self.article_blobs_dict[key][ind], '', key, ind, art_list_length))
-        with ProcessPoolExecutor(max_workers=ArticleTextAnalyzer.MAX_PROCESS_WORKERS) as executor:
-            prob_conserv_list = [(row[2],
-                                  [self.classifier.prob_classify(sentence).prob('conservative')
-                                   for sentence in sentence_list[0]],
-                                  [sentence for sentence in sentence_list[1]])
-                                 for row, sentence_list in zip(prob_conserv_list,
-                                                               executor.map(self.clean_text_blob, prob_conserv_list))]
-        for row in prob_conserv_list:
-            if len(row[1]) > 0:
-                if row[0] in classifications:
-                    classifications[row[0]].append((mean(row[1]), mean(row[2])))
-                else:
-                    classifications[row[0]] = [(mean(row[1]), mean(row[2]))]
-        for key in classifications:
-            classifications[key] = (mean(classifications[key][0]), mean(classifications[key][1]))
-        upper_lim = mean([prob[0] for key, prob in classifications.items() if key in SITE_CATEGORIES['conservative']])
-        lower_lim = mean([prob[0] for key, prob in classifications.items() if key in SITE_CATEGORIES['liberal']])
-        for key in classifications:
-            if key in SITE_CATEGORIES['conservative']:
-                classifications[key] = (1, classifications[key][1])
-            elif key in SITE_CATEGORIES['liberal']:
-                classifications[key] = (0, classifications[key][1])
-            else:
-                classifications[key] = ((classifications[key][0] - lower_lim) / (upper_lim - lower_lim),
-                                        classifications[key][1])
+        with ProcessPoolExecutor(max_workers=ArticleTextAnalyzer.MAX_PROCESS_WORKERS) as ex:
+            for site, cl_dict in zip(self.article_blobs_dict.keys(), ex.map(self.calculate_means,
+                                                                            self.article_blobs_dict.items())):
+                classifications[site] = cl_dict
+
         return classifications
 
-    @staticmethod
-    def plot_classified_output(cl):
+    def calculate_means(self, blobs_dict_item):
+        site, sentence_analysis = blobs_dict_item
+        print('calculating mean bias and subjectivity for ' + site)
+        return {
+            'bias': mean([self.classifier.prob_classify(sentence).prob('conservative')
+                          for sentence in sentence_analysis['sentences']]),
+            'subjectivity': mean(sentence_analysis['subjectivity'])
+        }
+
+    def plot_output(self, cl):
+        # create dataframe for scatter plot
         plot_df = pd.DataFrame.from_dict(cl)
-        plot_df.index = ['bias', 'subjectivity']
         plot_df = plot_df.transpose().reset_index()
         plot_df.rename(columns={'index': 'site'}, inplace=True)
+        plot_df['full_name'] = plot_df['site'].apply(lambda x: SITE_SPIDER_CONFIG[x]['full_name'])
         print(plot_df)
 
-        sns.set_theme()
+        # scatter plot styling
+        sns.set_style('ticks', SCATTER_PLOT_STYLE_PARAMS)
 
-        sns.relplot(
+        # layout for output
+        fig = plt.figure(constrained_layout=True)
+        gs = fig.add_gridspec(2, 2)
+        ax1 = fig.add_subplot(gs[0, :])
+        ax2 = fig.add_subplot(gs[1, 0])
+        ax3 = fig.add_subplot(gs[1, 1])
+
+        # create scatter plot with point labels and assign to top row of layout
+        sns.scatterplot(
             data=plot_df,
             x='bias',
             y='subjectivity',
-            hue='site'
+            hue='bias',
+            ax=ax1,
+            legend=None,
+            palette=sns.color_palette('coolwarm', as_cmap=True)
         )
-
         for i in range(plot_df.shape[0]):
-            plt.text(
-                x=plot_df.bias[i] + (0.02 if plot_df.bias[i] <= 0.5 else -1 * (len(plot_df.site[i]) + 3) * 0.0125),
-                y=plot_df.subjectivity[i]-0.005,
-                s=plot_df.site[i],
-                fontdict=dict(size=10))
+            ax1.annotate(
+                text=plot_df.full_name[i],
+                xy=(plot_df.bias[i], plot_df.subjectivity[i]),
+                textcoords='offset points',
+                xytext=(0, 5),
+                ha='center',
+                fontsize=8,
+                color='white'
+            )
+
+        # create word clouds and assign to bottom two slots in layout
+        self.generate_wordclouds(
+            data=self.article_blobs_dict,
+            bgcolor='white',
+            axes=[ax2, ax3]
+        )
 
         plt.show()
 
@@ -168,9 +223,9 @@ class ArticleTextAnalyzer:
 if __name__ == '__main__':
     start = perf_counter()
     article_dict = ArticleTextAnalyzer.read_news_scraper_output_file_into_dict('./data/news_scraper_data.csv')
-    ata = ArticleTextAnalyzer(article_dict)
-    print(ata.classifier.show_informative_features())
+    ata = ArticleTextAnalyzer(article_dict, 'georgia voting law')
     cl = ata.classify_nonpartisan_articles()
-    ata.plot_classified_output(cl)
     end = perf_counter()
     print(f'Ran in {end - start:0.4f} seconds')
+    print(cl)
+    ata.plot_output(cl)

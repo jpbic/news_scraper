@@ -25,7 +25,8 @@ SITE_SCRAPE_CONFIG = {
         'query_string': r'https://www.breitbart.com/search/?s={query}#gsc.tab=0&gsc.q={query}&gsc.page={page}',
         'initial_page_index': 1,
         'search_term_concat': r'%20',
-        'articles_links_xpath': r'//article//div[@class="gsc-thumbnail-inside"]//a[contains(@class, "gs-title") and not(contains(@href, "/tag/"))]',
+        'articles_links_xpath': r'//article//div[@class="gsc-thumbnail-inside"]//a[contains(@class, "gs-title") '
+                                'and not(contains(@href, "/tag/"))]',
         'articles_content_xpath': r'//div[@class="entry-content"]/p',
         'popup_close_button_xpath': r'//span[@id="ISCTO_close"]'
     },
@@ -166,8 +167,8 @@ SITE_SCRAPE_CONFIG = {
 }
 
 SITE_CATEGORIES = {
-    'conservative': {'daily_wire', 'blaze', 'breitbart'},
-    'liberal': {'second_nexus', 'bipartisan_report', 'tpm'}
+    'liberal': {'second_nexus', 'bipartisan_report', 'tpm'},
+    'conservative': {'daily_wire', 'blaze', 'breitbart'}
 }
 
 SITE_SPIDER_CONFIG = {
@@ -527,4 +528,15 @@ AJAX_HEADERS = {
     "Referer": "https://www.google.com/",
     "Accept-Encoding": "gzip, deflate, br",
     "Accept-Language": "en-US,en;q=0.9"
+}
+
+SCATTER_PLOT_STYLE_PARAMS = {
+    'axes.facecolor': 'black',
+    'axes.edgecolor': 'white',
+    'figure.facecolor': 'black',
+    'axes.labelcolor': 'white',
+    'axes.titlecolor': 'white',
+    'axes.titlesize': 16,
+    'xtick.color': 'white',
+    'ytick.color': 'white'
 }
